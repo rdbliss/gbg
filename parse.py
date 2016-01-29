@@ -11,6 +11,23 @@ def get_main(ast):
 
     return None
 
+def are_siblings(extra_one, extra_two):
+    """Check if two NodeExtras are siblings.
+    They are siblings iff they both exist unnested in a sequence of
+    statements. Currently, this is checked by looking to see if
+        1. Both are under a Compound node, and
+        2. Both have the _same_ Compound node as a parent.
+    I justify this by saying that there can't be any sequence of statements if
+    they aren't inside of a Compound.
+    """
+    one_parent = extra_one.parents[-1]
+    two_parent = extra_two.parents[-1]
+
+    under_compound = (type(one_parent) == Compound and
+                        type(two_parent) == Compound)
+
+    return under_compound and one_parent == two_parent
+
 class GotoLabelFinder(NodeVisitor):
     """Visitor that will find every goto or label under a given node.
 
