@@ -58,6 +58,7 @@ def remove_siblings(extra_label, extra_conditional):
 
     label_index, cond_index = None, None
 
+
     for index, node in enumerate(compound.block_items):
         if node == conditional:
             cond_index = index
@@ -65,8 +66,9 @@ def remove_siblings(extra_label, extra_conditional):
             label_index = index
 
     assert(label_index >= 0 and cond_index >= 0)
+    assert(label_index != cond_index)
 
-    if label_index >= cond_index:
+    if label_index > cond_index:
         # Goto is before the label.
         # In this case, we guard the statements from the goto to the label in a
         # new conditional.
@@ -79,7 +81,20 @@ def remove_siblings(extra_label, extra_conditional):
         post_conditional = compound.block_items[label_index:]
         compound.block_items = pre_goto + [guard] + post_conditional
     else:
-        raise NotImplementedError("Ooops!")
+        # Goto is after the label (or the goto _is_ the label, which means
+        # something has gone terribly wrong).
+        # In this case, we place a do-while loop directly after the label that
+        # will execute the statements as long as we're jumping.
+        # Also, we'll need to make sure we grab the statement that the label
+        # itself captures.
+        cond = conditional.cond
+        between_statements = [label.stmt] + compound.block_items[label_index+1:cond_index]
+        between_block = Compound(between_statements)
+        do_while = DoWhile(cond, between_block)
+        label.stmt = do_while
+        pre_to_label = compound.block_items[:label_index+1]
+        after_goto = compound.block_items[cond_index+1:]
+        compound.block_items = pre_to_label + after_goto
 
 def are_siblings(extra_one, extra_two):
     """Check if two NodeExtras are siblings.
