@@ -1,3 +1,14 @@
+"""
+Possible bug:
+
+```
+first:
+    if (1) goto second;
+```
+
+pycparser doesn't seem to visit the statement that a label captures?
+"""
+
 import pycparser
 from pycparser.c_ast import *
 from collections import namedtuple
@@ -10,6 +21,45 @@ def get_main(ast):
             return node
 
     return None
+
+def remove_siblings(extra_label, extra_conditional):
+    """TODO: Docstring for remove_siblings.
+
+    :extra_label: TODO
+    :extra_conditional: TODO
+    :returns: TODO
+
+    """
+    assert(are_siblings(extra_label, extra_conditional))
+
+    compound = extra_label.parents[-1]
+    conditional = extra_conditional.node
+    label = extra_label.node
+
+    label_index, cond_index = None, None
+
+    for index, node in enumerate(compound.block_items):
+        if node == conditional:
+            cond_index = index
+        elif node == label:
+            label_index = index
+
+    assert(label_index >= 0 and cond_index >= 0)
+
+    if label_index >= cond_index:
+        # Goto is before the label.
+        # In this case, we guard the statements from the goto to the label in a
+        # new conditional.
+        cond = UnaryOp("!", conditional.cond)
+        in_between = compound.block_items[cond_index+1:label_index]
+        between_compound = Compound(in_between)
+        guard = If(cond, between_compound, None)
+
+        pre_goto = compound.block_items[:cond_index]
+        post_conditional = compound.block_items[label_index:]
+        compound.block_items = pre_goto + [guard] + post_conditional
+    else:
+        raise NotImplementedError("Ooops!")
 
 def are_siblings(extra_one, extra_two):
     """Check if two NodeExtras are siblings.
