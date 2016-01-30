@@ -22,6 +22,26 @@ def get_main(ast):
 
     return None
 
+def pair_goto_labels(labels, conditional_gotos):
+    """Return a dictionary of (label, [goto_partners]) pairs.
+    The dictionary's keys are NodeExtras containing labels, and the values are
+    lists of NodeExtras containing goto statements whose targets are the label.
+    """
+    label_dict = {}
+
+    for extra_label in labels:
+        label = extra_label.node
+        label_dict[label.name] = []
+
+        for conditional_extra in conditional_gotos:
+            cond = conditional_extra.node
+            goto = cond.iftrue
+            target = goto.name
+            if target == label.name:
+                label_dict[label.name].append(conditional_extra)
+
+    return label_dict
+
 def remove_siblings(extra_label, extra_conditional):
     """TODO: Docstring for remove_siblings.
 
@@ -83,6 +103,9 @@ class GotoLabelFinder(NodeVisitor):
 
     The results will be two lists of NodeExtra's, self.gotos and self.labels,
     complete with the offset, level, and parent stack for each.
+    The self.gotos list is actually a list of If NodeExtras, with the offset,
+    level, and parent stack of the goto. This isn't so strange, as we're treating
+    the conditional and goto as one unit.
     """
 
     def __init__(self):
@@ -95,7 +118,7 @@ class GotoLabelFinder(NodeVisitor):
     def level_visit(self, node):
         self.level += 1
         self.generic_visit(node)
-        seld.level -= 1
+        self.level -= 1
 
     def generic_visit(self, node):
         self.parents.append(node)
@@ -106,7 +129,13 @@ class GotoLabelFinder(NodeVisitor):
 
     def visit_Goto(self, node):
         parents = list(self.parents)
-        self.gotos.append(NodeExtra(parents, self.offset, self.level, node))
+        parent = parents[-1]
+
+        if type(parent) != If:
+            line = node.coord.line
+            raise NotImplementedError("unsupported unconditional goto statement at line {}".format(line))
+
+        self.gotos.append(NodeExtra(parents[:-1], self.offset, self.level, parent))
         self.offset += 1
 
     def visit_Label(self, node):
@@ -134,9 +163,23 @@ class GotoLabelFinder(NodeVisitor):
         else:
             self.generic_visit(node)
 
+def do_it(t, d):
+    for extra_label in t.labels:
+        label = extra_label.node
+        for extra_conditional in d[label.name]:
+            if are_siblings(extra_label, extra_conditional):
+                print("Siblings!")
+                remove_siblings(extra_label, extra_conditional)
+            else:
+                print("Not!")
+
 if __name__ == "__main__":
     ast = pycparser.parse_file("./test.c", use_cpp=True,
                     cpp_args="-I/usr/share/python3-pycparser/fake_libc_include")
     main = get_main(ast)
     t = GotoLabelFinder()
     t.visit(main)
+    d = pair_goto_labels(t.labels, t.gotos)
+    main.body.show()
+    do_it(t, d)
+    main.body.show()
