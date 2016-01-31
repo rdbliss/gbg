@@ -11,6 +11,7 @@ pycparser doesn't seem to visit the statement that a label captures?
 
 import pycparser
 from pycparser.c_ast import *
+from pycparser import c_generator
 from collections import namedtuple
 
 NodeExtra = namedtuple("ExtraNode", "parents offset level node")
@@ -195,6 +196,8 @@ if __name__ == "__main__":
     t = GotoLabelFinder()
     t.visit(main)
     d = pair_goto_labels(t.labels, t.gotos)
-    main.body.show()
+    generator = c_generator.CGenerator()
+
+    print(generator.visit(main))
     do_it(t, d)
-    main.body.show()
+    print(generator.visit(main))
