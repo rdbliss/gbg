@@ -41,7 +41,7 @@ def pair_goto_labels(labels, conditional_gotos):
 
 def is_conditional_goto(node):
     """
-    Return if `node` is a conditional whose only child is a goto statement.
+    Return if `node` is a conditional whose only branch is a goto statement.
     """
     return (type(node) == If and type(node.iftrue) == Goto and
                 node.iffalse == None)
@@ -50,6 +50,7 @@ def update_parents(compound):
     """
     Find every label or conditional goto under the top-level of `compound` and
     make sure their parent is `compound`.
+    Normally used after a transformation.
     """
     for node in compound.block_items:
         if type(node) == Goto or is_conditional_goto(node):
@@ -57,9 +58,7 @@ def update_parents(compound):
 
 def remove_siblings(label, conditional):
     """Remove a conditional goto/label node pair that are siblings.
-
-    Bug: Parents will need to be updated after this function.
-    """
+    Parents need to be updated after the removal, and this function does that."""
     assert(are_siblings(label, conditional))
 
     compound = label.parents[-1]
