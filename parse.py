@@ -14,8 +14,6 @@ from pycparser.c_ast import *
 from pycparser import c_generator
 from collections import namedtuple
 
-NodeExtra = namedtuple("ExtraNode", "parents offset level node")
-
 def get_function(ast, name):
     for node in ast.ext:
         if type(node) == FuncDef and node.decl.name == name:
