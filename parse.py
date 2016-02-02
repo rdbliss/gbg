@@ -279,6 +279,9 @@ if __name__ == "__main__":
     func = get_function(ast, function_name)
     generator = c_generator.CGenerator()
 
-    print(generator.visit(func))
-    do_it(func)
-    print(generator.visit(func))
+    # Copy contents of `do_it` just for interpreter convenience.
+    t = GotoLabelFinder()
+    t.visit(func)
+    labels = t.labels
+    gotos = t.gotos
+    d = pair_goto_labels(labels, gotos)
