@@ -16,9 +16,9 @@ from collections import namedtuple
 
 NodeExtra = namedtuple("ExtraNode", "parents offset level node")
 
-def get_main(ast):
+def get_function(ast, name):
     for node in ast.ext:
-        if type(node) == FuncDef and node.decl.name == "main":
+        if type(node) == FuncDef and node.decl.name == name:
             return node
 
     return None
@@ -179,7 +179,13 @@ class GotoLabelFinder(NodeVisitor):
         else:
             self.generic_visit(node)
 
-def do_it(t, d):
+def do_it(func_node):
+    t = GotoLabelFinder()
+    t.visit(func_node)
+    labels = t.labels
+    gotos = t.gotos
+    d = pair_goto_labels(labels, gotos)
+
     for extra_label in t.labels:
         label = extra_label.node
         for extra_conditional in d[label.name]:
@@ -190,14 +196,25 @@ def do_it(t, d):
                 print("Not!")
 
 if __name__ == "__main__":
-    ast = pycparser.parse_file("./test.c", use_cpp=True,
+    import sys
+
+    filename = ""
+    function_name = ""
+    try:
+        filename = sys.argv[1]
+    except IndexError:
+        filename = "./test.c"
+
+    try:
+        function_name = sys.argv[2]
+    except IndexError:
+        function_name = "main"
+
+    ast = pycparser.parse_file(filename, use_cpp=True,
                     cpp_args="-I/usr/share/python3-pycparser/fake_libc_include")
-    main = get_main(ast)
-    t = GotoLabelFinder()
-    t.visit(main)
-    d = pair_goto_labels(t.labels, t.gotos)
+    func = get_function(ast, function_name)
     generator = c_generator.CGenerator()
 
-    print(generator.visit(main))
-    do_it(t, d)
-    print(generator.visit(main))
+    print(generator.visit(func))
+    do_it(func)
+    print(generator.visit(func))
