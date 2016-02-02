@@ -56,19 +56,23 @@ def update_parents(compound):
         if type(node) == Goto or is_conditional_goto(node):
             node.parents[-1] = compound
 
+def compound_find(compound, node):
+    """Return the index of `node` in `compound.block_items`, or None if it
+    wasn't found."""
+    for k, n in enumerate(compound.block_items):
+        if n == node:
+            return k
+
+    return None
+
 def remove_siblings(label, conditional):
     """Remove a conditional goto/label node pair that are siblings.
     Parents need to be updated after the removal, and this function does that."""
     assert(are_siblings(label, conditional))
 
     compound = label.parents[-1]
-    label_index, cond_index = None, None
-
-    for index, node in enumerate(compound.block_items):
-        if node == conditional:
-            cond_index = index
-        elif node == label:
-            label_index = index
+    label_index = compound_find(compound, label)
+    cond_index = compound_find(compound, conditional)
 
     assert(label_index >= 0 and cond_index >= 0)
     assert(label_index != cond_index)
