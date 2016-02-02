@@ -25,40 +25,30 @@ def get_function(ast, name):
 
 def pair_goto_labels(labels, conditional_gotos):
     """Return a dictionary of (label, [goto_partners]) pairs.
-    The dictionary's keys are NodeExtras containing labels, and the values are
-    lists of NodeExtras containing goto statements whose targets are the label.
+    The dictionary's keys are label names, and the values are
+    lists of If nodes containing whose goto statements targets are the label.
     """
     label_dict = {}
 
-    for extra_label in labels:
-        label = extra_label.node
+    for label in labels:
         label_dict[label.name] = []
 
-        for conditional_extra in conditional_gotos:
-            cond = conditional_extra.node
+        for cond in conditional_gotos:
             goto = cond.iftrue
             target = goto.name
             if target == label.name:
-                label_dict[label.name].append(conditional_extra)
+                label_dict[label.name].append(cond)
 
     return label_dict
 
-def remove_siblings(extra_label, extra_conditional):
-    """TODO: Docstring for remove_siblings.
-
-    :extra_label: TODO
-    :extra_conditional: TODO
-    :returns: TODO
+def remove_siblings(label, conditional):
+    """Remove a conditional goto/label node pair that are siblings.
 
     Bug: Parents will need to be updated after this function.
-
     """
-    assert(are_siblings(extra_label, extra_conditional))
+    assert(are_siblings(label, conditional))
 
-    compound = extra_label.parents[-1]
-    conditional = extra_conditional.node
-    label = extra_label.node
-
+    compound = label.parents[-1]
     label_index, cond_index = None, None
 
     for index, node in enumerate(compound.block_items):
@@ -97,8 +87,10 @@ def remove_siblings(extra_label, extra_conditional):
         after_goto = compound.block_items[cond_index+1:]
         compound.block_items = pre_to_label + after_goto
 
-def are_siblings(extra_one, extra_two):
-    """Check if two NodeExtras are siblings.
+def are_siblings(one, two):
+    """Check if two nodes with parents are siblings.
+    If they don't have parents, this should raise an AttributeError.
+
     They are siblings iff they both exist unnested in a sequence of
     statements. Currently, this is checked by looking to see if
         1. Both are under a Compound node, and
@@ -106,8 +98,8 @@ def are_siblings(extra_one, extra_two):
     I justify this by saying that there can't be any sequence of statements if
     they aren't inside of a Compound.
     """
-    one_parent = extra_one.parents[-1]
-    two_parent = extra_two.parents[-1]
+    one_parent = one.parents[-1]
+    two_parent = two.parents[-1]
 
     under_compound = (type(one_parent) == Compound and
                         type(two_parent) == Compound)
@@ -117,10 +109,10 @@ def are_siblings(extra_one, extra_two):
 class GotoLabelFinder(NodeVisitor):
     """Visitor that will find every goto or label under a given node.
 
-    The results will be two lists of NodeExtra's, self.gotos and self.labels,
-    complete with the offset, level, and parent stack for each.
-    The self.gotos list is actually a list of If NodeExtras, with the offset,
-    level, and parent stack of the goto. This isn't so strange, as we're treating
+    The results will be two lists of Nodes, self.gotos and self.labels,
+    complete with the offset, level, and parent stack monkey patched on for
+    each.  The self.gotos list is actually a list of If Nodes, with the offset,
+    level, and parent stack of the If. This isn't so strange, as we're treating
     the conditional and goto as one unit.
     """
 
@@ -144,6 +136,17 @@ class GotoLabelFinder(NodeVisitor):
         self.parents.pop()
 
     def visit_Goto(self, node):
+        """
+        Append the conditonal parent of the goto to self.gotos, or raise a
+        NotImplementedError if that isn't possible.
+
+        The conditional parent will have some extra attributes:
+            parents: List of nodes above the conditional.
+
+        The goto will also have some extra attributes:
+            offset: The offset of the goto.
+            level: The level of the goto.
+        """
         parents = list(self.parents)
         parent = parents[-1]
 
@@ -151,12 +154,26 @@ class GotoLabelFinder(NodeVisitor):
             line = node.coord.line
             raise NotImplementedError("unsupported unconditional goto statement at line {}".format(line))
 
-        self.gotos.append(NodeExtra(parents[:-1], self.offset, self.level, parent))
+        # The parent doesn't have itself as a parent.
+        parent.parents = list(self.parents)[:-1]
+        # Add some goto-specific data to the goto.
+        node.offset = self.offset
+        node.level = self.level
+        self.gotos.append(parent)
+
         self.offset += 1
 
     def visit_Label(self, node):
-        parents = list(self.parents)
-        self.labels.append(NodeExtra(parents, self.offset, self.level, node))
+        """Append the label to self.labels with some extra attributes.
+        Attributes:
+            parents: Nodes above the label.
+            Offset: Offset of the label.
+            Level: Level of the label.
+        """
+        node.parents = list(self.parents)
+        node.offset = self.offset
+        node.level = self.level
+        self.labels.append(node)
         self.offset += 1
 
     def visit_If(self, node):
@@ -186,12 +203,11 @@ def do_it(func_node):
     gotos = t.gotos
     d = pair_goto_labels(labels, gotos)
 
-    for extra_label in t.labels:
-        label = extra_label.node
-        for extra_conditional in d[label.name]:
-            if are_siblings(extra_label, extra_conditional):
+    for label in t.labels:
+        for conditional in d[label.name]:
+            if are_siblings(label, conditional):
                 print("Siblings!")
-                remove_siblings(extra_label, extra_conditional)
+                remove_siblings(label, conditional)
             else:
                 print("Not!")
 
