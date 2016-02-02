@@ -244,6 +244,29 @@ class GotoLabelFinder(NodeVisitor):
 def is_loop(node):
     return type(node) in [While, DoWhile, For]
 
+def declare_regular_variable(var_id, type_name, init, function):
+    """Declare `type_name var_id = init` at the top of `function`.
+    This is "regular" in the sense that there are no storage qualifiers.
+
+    :var_id: A node of type ID.
+    :type_name: A string specificing what type the variable is.
+    :init: A node specifiying what the initial value is.
+    :function: The FuncDef node where this variable will be declared.
+    :returns: Nothing.
+    """
+    id_type = IdentifierType([type_name])
+    type_decl = TypeDecl(var_id.name, [], id_type)
+    decl = Decl(var_id, [], [], [], type_decl, init, None)
+
+    function.body.block_items.insert(0, decl)
+
+def declare_logic_variable(name, function):
+    """Declare the variable `int name = 0` at the top of `function`."""
+    var_id = ID(name)
+    type_name = "int"
+    logical_value = Constant(type_name, "0")
+    declare_regular_variable(var_id, type_name, logical_value, function)
+
 def do_it(func_node):
     t = GotoLabelFinder()
     t.visit(func_node)
