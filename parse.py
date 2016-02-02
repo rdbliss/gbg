@@ -241,6 +241,9 @@ class GotoLabelFinder(NodeVisitor):
         else:
             self.generic_visit(node)
 
+def is_loop(node):
+    return type(node) in [While, DoWhile, For]
+
 def do_it(func_node):
     t = GotoLabelFinder()
     t.visit(func_node)
