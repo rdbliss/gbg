@@ -41,6 +41,22 @@ def pair_goto_labels(labels, conditional_gotos):
 
     return label_dict
 
+def is_conditional_goto(node):
+    """
+    Return if `node` is a conditional whose only child is a goto statement.
+    """
+    return (type(node) == If and type(node.iftrue) == Goto and
+                node.iffalse == None)
+
+def update_parents(compound):
+    """
+    Find every label or conditional goto under the top-level of `compound` and
+    make sure their parent is `compound`.
+    """
+    for node in compound.block_items:
+        if type(node) == Goto or is_conditional_goto(node):
+            node.parents[-1] = compound
+
 def remove_siblings(label, conditional):
     """Remove a conditional goto/label node pair that are siblings.
 
@@ -67,6 +83,7 @@ def remove_siblings(label, conditional):
         cond = UnaryOp("!", conditional.cond)
         in_between = compound.block_items[cond_index+1:label_index]
         between_compound = Compound(in_between)
+        update_parents(between_compound)
         guard = If(cond, between_compound, None)
         pre_goto = compound.block_items[:cond_index]
         post_conditional = compound.block_items[label_index:]
@@ -80,8 +97,9 @@ def remove_siblings(label, conditional):
         # itself captures.
         cond = conditional.cond
         between_statements = [label.stmt] + compound.block_items[label_index+1:cond_index]
-        between_block = Compound(between_statements)
-        do_while = DoWhile(cond, between_block)
+        between_compound = Compound(between_statements)
+        update_parents(between_compound)
+        do_while = DoWhile(cond, between_compound)
         label.stmt = do_while
         pre_to_label = compound.block_items[:label_index+1]
         after_goto = compound.block_items[cond_index+1:]
