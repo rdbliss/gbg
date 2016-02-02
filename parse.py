@@ -106,6 +106,32 @@ def remove_siblings(label, conditional):
         after_goto = compound.block_items[cond_index+1:]
         compound.block_items = pre_to_label + after_goto
 
+def are_directly_related(one, two):
+    """Check if two nodes are directly related.
+    If they don't have parents, this should raise an AttributeError.
+
+    Two nodes are siblings iff there exists some sequence of statements such that
+    one is present in one, and the other is either present or nested inside of
+    one of the statements.
+
+    Note: Being siblings is a special case of being related.
+
+    The check is this:
+        - At least one has a Compound parent.
+        - The other has that same compound parent somewhere in its parent
+          stack.
+    """
+    parent_one = one.parents[-1]
+    parent_two = two.parents[-1]
+    if type(parent_one) == Compound and parent_one in two.parents:
+        # `two` exists in or is nested in the compound that `one` is in.
+        return True
+    elif type(parent_two) == Compound and parent_two in one.parents:
+        # `one` exists in or is nested in the compound that `two` is in.
+        return True
+
+    return False
+
 def are_siblings(one, two):
     """Check if two nodes with parents are siblings.
     If they don't have parents, this should raise an AttributeError.
