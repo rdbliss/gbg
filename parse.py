@@ -50,6 +50,8 @@ def remove_siblings(extra_label, extra_conditional):
     :extra_conditional: TODO
     :returns: TODO
 
+    Bug: Parents will need to be updated after this function.
+
     """
     assert(are_siblings(extra_label, extra_conditional))
 
@@ -58,7 +60,6 @@ def remove_siblings(extra_label, extra_conditional):
     label = extra_label.node
 
     label_index, cond_index = None, None
-
 
     for index, node in enumerate(compound.block_items):
         if node == conditional:
@@ -77,7 +78,6 @@ def remove_siblings(extra_label, extra_conditional):
         in_between = compound.block_items[cond_index+1:label_index]
         between_compound = Compound(in_between)
         guard = If(cond, between_compound, None)
-
         pre_goto = compound.block_items[:cond_index]
         post_conditional = compound.block_items[label_index:]
         compound.block_items = pre_goto + [guard] + post_conditional
