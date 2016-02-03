@@ -267,6 +267,35 @@ def declare_logic_variable(name, function):
     logical_value = Constant(type_name, "0")
     declare_regular_variable(var_id, type_name, logical_value, function)
 
+def create_logic_assign(name):
+    var_id = ID(name)
+    type_name = "int"
+    logical_value = Constant(type_name, "0")
+    return Assignment("=", var_id, logical_value)
+
+def logical_label_name(label):
+    return "goto_{}".format(label.name)
+
+def logic_init(labels, func):
+    """
+    Declare a logical variable `goto_LABEL = 0` for each label in `labels` at
+    the top of `func`. Also, reinitialize it to 0 at the label.
+    This is only useful if each label is actually _in_ the function.
+    """
+
+    for label in labels:
+        parent = label.parents[-1]
+        if type(parent) != Compound:
+            raise NotImplementedError("Can only initialize labels under compounds for now!")
+        declare_logic_variable("goto_{}".format(label.name), func)
+
+        clear_logical_var = create_logic_assign(logical_label_name(label))
+        label_index = compound_find(label.parents[-1], label)
+        # Move the statement that the label holds to after the label,
+        # and the setting to 0 into the label.
+        parent.block_items.insert(label_index + 1, label.stmt)
+        label.stmt = clear_logical_var
+
 def do_it(func_node):
     t = GotoLabelFinder()
     t.visit(func_node)
