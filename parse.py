@@ -262,13 +262,40 @@ def under_switch(node):
     return (type(parent) == Case and type(above_parent) == Compound and
                 type(switch) == Switch)
 
+def move_goto_out_switch(conditional):
+    """Move a conditional goto out of a switch statement."""
+    assert(under_switch(conditional))
+
+    above_compound, switch, switch_compound, case = conditional.parents[-4:]
+
+    if type(above_compound) != Compound:
+        raise NotImplementedError("Only support switch statements under "
+                                    "compounds!")
+
+    cond = conditional.cond
+    goto = conditional.iftrue
+    name = logical_label_name(goto)
+    # Set the logical value to the condition of the goto.
+    set_logical = create_assign(name, cond)
+
+    # If the logical variable is true, then break out of the switch.
+    guard = If(ID(name), Break(), None)
+
+    cond_index = case.stmts.index(conditional)
+    assert(cond_index >= 0)
+
+    case.stmts[cond_index] = set_logical
+    case.stmts.insert(cond_index+1, guard)
+
+    switch_index = above_compound.block_items.index(switch)
+    above_compound.block_items.insert(switch_index+1, conditional)
+
+    # We moved above three parents, so remove three of them from the conditional
+    # to make sure that later checks work.
+    conditional.parents = conditional.parents[:-3]
+
 def move_goto_out_loop(conditional):
     """Move a conditional goto out of a loop statement."""
-
-    loop_compound = conditional.parents[-1]
-    loop = conditional.parents[-2]
-    above_parent = conditional.parents[-3]
-
     assert(under_loop(conditional))
 
     if type(above_parent) != Compound:
