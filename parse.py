@@ -384,7 +384,11 @@ def do_it(func_node):
                     break
 
                 if under_loop(conditional):
+                    print("Moving out of a loop...")
                     move_goto_out_loop(conditional)
+                elif under_switch(conditional):
+                    print("Moving out of a switch...")
+                    move_goto_out_switch(conditional)
                 else:
                     print("Nothing we can do for the non-looped...")
                     break
