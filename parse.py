@@ -288,6 +288,7 @@ def move_goto_out_switch(conditional):
 def move_goto_out_loop(conditional):
     """Move a conditional goto out of a loop statement."""
     assert(under_loop(conditional))
+    above_parent, loop, loop_compound = conditional.parents[-3:]
 
     if type(above_parent) != Compound:
         raise NotImplementedError("Can only pull gotos out of loops that are "
