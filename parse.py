@@ -271,8 +271,8 @@ def create_assign(name, val):
     var_id = ID(name)
     return Assignment("=", var_id, val)
 
-def logical_label_name(label):
-    return "goto_{}".format(label.name)
+def logical_label_name(goto_label):
+    return "goto_{}".format(goto_label.name)
 
 def logic_init(labels, func):
     """
