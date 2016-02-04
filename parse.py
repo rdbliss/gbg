@@ -355,14 +355,28 @@ def do_it(func_node):
     labels = t.labels
     gotos = t.gotos
     d = pair_goto_labels(labels, gotos)
+    logic_init(t.labels, func_node)
 
     for label in t.labels:
         for conditional in d[label.name]:
+            while not are_siblings(label, conditional):
+                if not are_directly_related(label, conditional):
+                    print("Skipping two indirectly related nodes...")
+                    break
+
+                if under_loop(conditional):
+                    move_goto_out_loop(conditional)
+                else:
+                    print("Nothing we can do for the non-looped...")
+                    break
+
+                print("One iteration done...")
+
             if are_siblings(label, conditional):
                 print("Siblings!")
                 remove_siblings(label, conditional)
             else:
-                print("Not!")
+                print("Well, we tried.")
 
 if __name__ == "__main__":
     import sys
