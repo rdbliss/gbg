@@ -56,23 +56,14 @@ def update_parents(compound):
         if type(node) == Goto or is_conditional_goto(node):
             node.parents[-1] = compound
 
-def compound_find(compound, node):
-    """Return the index of `node` in `compound.block_items`, or None if it
-    wasn't found."""
-    for k, n in enumerate(compound.block_items):
-        if n == node:
-            return k
-
-    return None
-
 def remove_siblings(label, conditional):
     """Remove a conditional goto/label node pair that are siblings.
     Parents need to be updated after the removal, and this function does that."""
     assert(are_siblings(label, conditional))
 
     compound = label.parents[-1]
-    label_index = compound_find(compound, label)
-    cond_index = compound_find(compound, conditional)
+    label_index = compound.block_items.index(label)
+    cond_index = compound.block_items.index(conditional)
 
     assert(label_index >= 0 and cond_index >= 0)
     assert(label_index != cond_index)
@@ -311,13 +302,13 @@ def move_goto_out_loop(conditional):
     # If the logical variable is true, then break out of the loop.
     guard = If(ID(name), Break(), None)
 
-    cond_index = compound_find(loop_compound, conditional)
+    cond_index = loop_compound.block_items.index(conditional)
     assert(cond_index >= 0)
 
     loop_compound.block_items[cond_index] = set_logical
     loop_compound.block_items.insert(cond_index+1, guard)
 
-    loop_index = compound_find(above_parent, loop)
+    loop_index = above_parent.index(loop)
     above_parent.block_items.insert(loop_index+1, conditional)
 
     # We moved above two parents, so remove two of them from the conditional to
@@ -362,18 +353,18 @@ def logic_init(labels, func):
     """
 
     for label in labels:
-        parent = label.parents[-1]
-        if type(parent) != Compound:
+        compound = label.parents[-1]
+        if type(compound) != Compound:
             raise NotImplementedError("Can only initialize labels under compounds for now!")
         declare_logic_variable("goto_{}".format(label.name), func)
 
         val = Constant("int", "0")
         clear_logical_var = create_assign(logical_label_name(label), val)
-        label_index = compound_find(label.parents[-1], label)
+        label_index = compound.block_items.index(label)
 
         # Move the statement that the label holds to after the label,
         # and the setting to 0 into the label.
-        parent.block_items.insert(label_index + 1, label.stmt)
+        compound.block_items.insert(label_index + 1, label.stmt)
         label.stmt = clear_logical_var
 
 def do_it(func_node):
