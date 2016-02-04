@@ -267,11 +267,9 @@ def declare_logic_variable(name, function):
     logical_value = Constant(type_name, "0")
     declare_regular_variable(var_id, type_name, logical_value, function)
 
-def create_logic_assign(name):
+def create_assign(name, val):
     var_id = ID(name)
-    type_name = "int"
-    logical_value = Constant(type_name, "0")
-    return Assignment("=", var_id, logical_value)
+    return Assignment("=", var_id, val)
 
 def logical_label_name(label):
     return "goto_{}".format(label.name)
@@ -289,8 +287,10 @@ def logic_init(labels, func):
             raise NotImplementedError("Can only initialize labels under compounds for now!")
         declare_logic_variable("goto_{}".format(label.name), func)
 
-        clear_logical_var = create_logic_assign(logical_label_name(label))
+        val = Constant("int", "0")
+        clear_logical_var = create_assign(logical_label_name(label), val)
         label_index = compound_find(label.parents[-1], label)
+
         # Move the statement that the label holds to after the label,
         # and the setting to 0 into the label.
         parent.block_items.insert(label_index + 1, label.stmt)
