@@ -244,6 +244,41 @@ class GotoLabelFinder(NodeVisitor):
 def is_loop(node):
     return type(node) in [While, DoWhile, For]
 
+def move_goto_out_loop(conditional):
+    """Move a conditional goto out of a loop statement."""
+
+    loop_compound = conditional.parents[-1]
+    loop = conditional.parents[-2]
+    above_parent = conditional.parents[-3]
+
+    assert(under_loop(conditional))
+
+    if type(above_parent) != Compound:
+        raise NotImplementedError("Can only pull gotos out of loops that are "
+                                    "under a compound!")
+
+    cond = conditional.cond
+    goto = conditional.iftrue
+    name = logical_label_name(goto)
+    # Set the logical value to the condition of the goto.
+    set_logical = create_assign(name, cond)
+
+    # If the logical variable is true, then break out of the loop.
+    guard = If(ID(name), Break(), None)
+
+    cond_index = compound_find(loop_compound, conditional)
+    assert(cond_index >= 0)
+
+    loop_compound.block_items[cond_index] = set_logical
+    loop_compound.block_items.insert(cond_index+1, guard)
+
+    loop_index = compound_find(above_parent, loop)
+    above_parent.block_items.insert(loop_index+1, conditional)
+
+    # We moved above two parents, so remove two of them from the conditional to
+    # make sure that later checks work.
+    conditional.parents = conditional.parents[:-2]
+
 def declare_regular_variable(var_id, type_name, init, function):
     """Declare `type_name var_id = init` at the top of `function`.
     This is "regular" in the sense that there are no storage qualifiers.
