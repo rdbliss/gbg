@@ -244,6 +244,24 @@ class GotoLabelFinder(NodeVisitor):
 def is_loop(node):
     return type(node) in [While, DoWhile, For]
 
+def under_loop(node):
+    """Test if a node is under a compound that is under a loop.
+    A node is under a loop if its parents are compound, then (loop).
+    If the node doesn't have parents, this will raise an AttributeError.
+    """
+    parent = node.parents[-1]
+    above_parent = node.parents[-2]
+    return type(parent) == Compound and is_loop(above_parent)
+
+def under_switch(node):
+    """Test if a node is under a switch statement.
+    This happens if its parents are case, then compound, then switch.
+    If the node doesn't have parents, this will raise an AttributeError.
+    """
+    switch, above_parent, parent = node.parents[-3:]
+    return (type(parent) == Case and type(above_parent) == Compound and
+                type(switch) == Switch)
+
 def move_goto_out_loop(conditional):
     """Move a conditional goto out of a loop statement."""
 
