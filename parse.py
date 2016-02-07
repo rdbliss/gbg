@@ -160,6 +160,7 @@ class GotoLabelFinder(NodeVisitor):
         self.parents = []
 
     def level_visit(self, node):
+        node.parents = list(self.parents)
         self.level += 1
         self.generic_visit(node)
         self.level -= 1
