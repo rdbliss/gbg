@@ -276,6 +276,9 @@ def move_goto_out_switch(conditional):
     # Set the logical value to the condition of the goto.
     set_logical = create_assign(name, cond)
 
+    # Make the conditional dependent on the logical variable.
+    conditional.cond = ID(name)
+
     # If the logical variable is true, then break out of the switch.
     guard = If(ID(name), Break(), None)
 
@@ -306,6 +309,9 @@ def move_goto_out_loop(conditional):
     name = logical_label_name(goto)
     # Set the logical value to the condition of the goto.
     set_logical = create_assign(name, cond)
+
+    # Make the conditional dependent on the logical variable.
+    conditional.cond = ID(name)
 
     # If the logical variable is true, then break out of the loop.
     guard = If(ID(name), Break(), None)
