@@ -240,6 +240,9 @@ def under_loop(node):
     A node is under a loop if its parents are compound, then (loop).
     If the node doesn't have parents, this will raise an AttributeError.
     """
+    if len(node.parents) < 2:
+        return False
+
     parent = node.parents[-1]
     above_parent = node.parents[-2]
     return type(parent) == Compound and is_loop(above_parent)
@@ -249,8 +252,11 @@ def under_switch(node):
     This happens if its parents are case, then compound, then switch.
     If the node doesn't have parents, this will raise an AttributeError.
     """
-    switch, above_parent, parent = node.parents[-3:]
-    return (type(parent) == Case and type(above_parent) == Compound and
+    if len(node.parents) < 3:
+        return False
+
+    switch, compound, case = node.parents[-3:]
+    return (type(case) == Case and type(compound) == Compound and
                 type(switch) == Switch)
 
 def move_goto_out_switch(conditional):
