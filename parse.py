@@ -72,7 +72,7 @@ def remove_siblings(label, conditional):
         # Goto is before the label.
         # In this case, we guard the statements from the goto to the label in a
         # new conditional.
-        cond = UnaryOp("!", conditional.cond)
+        cond = negate(conditional.cond)
         in_between = compound.block_items[cond_index+1:label_index]
         between_compound = Compound(in_between)
         update_parents(between_compound)
@@ -406,7 +406,7 @@ def move_goto_in_loop(conditional, label):
     cond = conditional.cond
     set_logical = create_assign(logical_name, cond)
 
-    guard = If(UnaryOp("!", ID(logical_name)), between_compound, None)
+    guard = If(negate(ID(logical_name)), between_compound, None)
     conditional.cond = ID(logical_name)
 
     loop.cond = BinaryOp("||", ID(logical_name), loop.cond)
@@ -414,6 +414,9 @@ def move_goto_in_loop(conditional, label):
     compound.block_items = compound.block_items[:cond_index] + [set_logical, guard] + compound.block_items[loop_index:]
     loop_compound.block_items.insert(0, conditional)
     update_parents(loop_compound)
+
+def negate(exp):
+    return UnaryOp("!", exp)
 
 def do_it(func_node):
     t = GotoLabelFinder()
