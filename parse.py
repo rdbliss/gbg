@@ -1,14 +1,3 @@
-"""
-Possible bug:
-
-```
-first:
-    if (1) goto second;
-```
-
-pycparser doesn't seem to visit the statement that a label captures?
-"""
-
 import pycparser
 from pycparser.c_ast import *
 from pycparser import c_generator
