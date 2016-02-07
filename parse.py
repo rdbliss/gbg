@@ -375,6 +375,46 @@ def logic_init(labels, func):
         compound.block_items.insert(label_index + 1, label.stmt)
         label.stmt = clear_logical_var
 
+def move_goto_in_loop(conditional, label):
+    assert(is_conditional_goto(conditional))
+    goto = conditional.iftrue
+
+    assert(under_loop(label))
+    loop = label.parents[-2]
+    loop_compound = label.parents[-1]
+
+    if type(conditional.parents[-1]) != Compound:
+        raise NotImplementedError("can only move gotos into loops whose parents are compounds!")
+
+    if (goto.offset > label.offset):
+        raise NotImplementedError("goto lifting not implemented yet!")
+
+    if not are_siblings(conditional, loop):
+        raise NotImplementedError("nested IT not implemented yet!")
+
+    compound = conditional.parents[-1]
+    cond_index = compound.block_items.index(conditional)
+    loop_index = compound.block_items.index(loop)
+
+    assert(cond_index >= 0 and loop_index >= 0 and cond_index != loop_index)
+
+    between_stmts = compound.block_items[cond_index+1:loop_index]
+    between_compound = Compound(between_stmts)
+    update_parents(between_compound)
+
+    logical_name = logical_label_name(goto)
+    cond = conditional.cond
+    set_logical = create_assign(logical_name, cond)
+
+    guard = If(UnaryOp("!", ID(logical_name)), between_compound, None)
+    conditional.cond = ID(logical_name)
+
+    loop.cond = BinaryOp("||", ID(logical_name), loop.cond)
+
+    compound.block_items = compound.block_items[:cond_index] + [set_logical, guard] + compound.block_items[loop_index:]
+    loop_compound.block_items.insert(0, conditional)
+    update_parents(loop_compound)
+
 def do_it(func_node):
     t = GotoLabelFinder()
     t.visit(func_node)
@@ -397,8 +437,7 @@ def do_it(func_node):
                     print("Moving out of a switch...")
                     move_goto_out_switch(conditional)
                 elif under_loop(label):
-                    print("Can't do loop IT yet...")
-                    break
+                    move_goto_in_loop(conditional, label)
                 elif under_switch(label):
                     print("Can't do switch IT yet...")
                     break
