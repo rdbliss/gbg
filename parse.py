@@ -315,7 +315,7 @@ def move_goto_out_loop(conditional):
     loop_compound.block_items[cond_index] = set_logical
     loop_compound.block_items.insert(cond_index+1, guard)
 
-    loop_index = above_parent.index(loop)
+    loop_index = above_parent.block_items.index(loop)
     above_parent.block_items.insert(loop_index+1, conditional)
 
     # We moved above two parents, so remove two of them from the conditional to
