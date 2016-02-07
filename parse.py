@@ -248,6 +248,16 @@ def under_loop(node):
     loop = node.parents[-2]
     return type(compound) == Compound and is_loop(loop)
 
+def under_if(node):
+    """Test if a node is under a compound that is under an If.
+    If the node doesn't have parents, this will raise an AttributeError.
+    """
+    if len(node.parents) < 2:
+        return False
+    compound = node.parents[-1]
+    conditional = node.parents[-2]
+    return type(compound) == Compound and type(conditional) == If
+
 def under_switch(node):
     """Test if a node is under a switch statement.
     This happens if its parents are case, then compound, then switch.
@@ -421,6 +431,42 @@ def move_goto_in_loop(conditional, label):
     loop_compound.block_items.insert(0, conditional)
     update_parents(loop_compound)
 
+def move_goto_out_if(conditional):
+    """Move a conditional goto out of an if-statement."""
+    assert(under_if(conditional))
+
+    above_if, if_stmt, if_compound = conditional.parents[-3:]
+
+    if (type(above_if) != Compound):
+        raise NotImplementedError("can't perform OT on an if-statement not under a compound!")
+
+    goto = conditional.iftrue
+    logical_name = logical_label_name(goto)
+    cond = conditional.cond
+    set_logical = create_assign(logical_name, cond)
+
+    cond_index = if_compound.block_items.index(conditional)
+    assert(cond_index >= 0)
+    after_goto = []
+
+    try:
+        after_goto = if_compound.block_items[cond_index+1:]
+    except IndexError:
+        pass
+
+    guard_block = Compound(after_goto)
+    guard = If(negate(ID(logical_name)), guard_block, None)
+    if_compound.block_items = if_compound.block_items[:cond_index] + [set_logical, guard]
+
+    # Make conditional dependent on logical variable.
+    conditional.cond = ID(logical_name)
+    update_parents(guard_block)
+
+    if_index = above_if.block_items.index(if_stmt)
+    assert(if_index >= 0)
+    above_if.block_items.insert(if_index + 1, conditional)
+    update_parents(above_if)
+
 def negate(exp):
     return UnaryOp("!", exp)
 
@@ -439,7 +485,10 @@ def do_it(func_node):
                     print("Skipping two indirectly related nodes...")
                     break
 
-                if under_loop(conditional):
+                if under_if(conditional):
+                    print("Moving out of a conditional...")
+                    move_goto_out_if(conditional)
+                elif under_loop(conditional):
                     print("Moving out of a loop...")
                     move_goto_out_loop(conditional)
                 elif under_switch(conditional):
