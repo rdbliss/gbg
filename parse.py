@@ -487,6 +487,9 @@ def do_it(func_node):
                 elif under_switch(label):
                     print("Can't do switch IT yet...")
                     break
+                elif under_if(label):
+                    print("Can't do if-statement IT yet...")
+                    break
                 else:
                     print("Nothing we can do for the non-looped...")
                     break
