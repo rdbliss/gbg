@@ -1,7 +1,6 @@
 import pycparser
 from pycparser.c_ast import *
 from pycparser import c_generator
-from collections import namedtuple
 
 def get_function(ast, name):
     for node in ast.ext:
