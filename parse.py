@@ -381,41 +381,14 @@ def logic_init(labels, func):
 
 def move_goto_in_loop(conditional, label):
     assert(is_conditional_goto(conditional))
-    goto = conditional.iftrue
-
     assert(under_loop(label))
+
+    goto = conditional.iftrue
     loop = label.parents[-2]
     loop_compound = label.parents[-1]
-
-    if type(conditional.parents[-1]) != Compound:
-        raise NotImplementedError("can only move gotos into loops whose parents are compounds!")
-
-    if (goto.offset > label.offset):
-        raise NotImplementedError("goto lifting not implemented yet!")
-
-    if not are_siblings(conditional, loop):
-        raise NotImplementedError("nested IT not implemented yet!")
-
     compound = conditional.parents[-1]
-    cond_index = compound.block_items.index(conditional)
-    loop_index = compound.block_items.index(loop)
 
-    assert(cond_index >= 0 and loop_index >= 0 and cond_index != loop_index)
-
-    between_stmts = compound.block_items[cond_index+1:loop_index]
-    between_compound = Compound(between_stmts)
-    update_parents(between_compound)
-
-    logical_name = logical_label_name(goto)
-    cond = conditional.cond
-    set_logical = create_assign(logical_name, cond)
-
-    guard = If(negate(ID(logical_name)), between_compound, None)
-    conditional.cond = ID(logical_name)
-
-    loop.cond = BinaryOp("||", ID(logical_name), loop.cond)
-
-    compound.block_items = compound.block_items[:cond_index] + [set_logical, guard] + compound.block_items[loop_index:]
+    place_inwards_cond_guard(compound, conditional, loop)
     loop_compound.block_items.insert(0, conditional)
     update_parents(loop_compound)
 
@@ -455,45 +428,49 @@ def move_goto_out_if(conditional):
     above_if.block_items.insert(if_index + 1, conditional)
     update_parents(above_if)
 
+def place_inwards_cond_guard(parent_compound, conditional, in_stmt):
+    if type(parent_compound) != Compound:
+        raise NotImplementedError("can only move gotos into statements whose parents are compounds!")
+
+    if not are_siblings(conditional, in_stmt):
+        raise NotImplementedError("nested IT not implemented yet!")
+
+    cond_index = parent_compound.block_items.index(conditional)
+    stmt_index = parent_compound.block_items.index(in_stmt)
+
+    if cond_index > stmt_index:
+        raise NotImplementedError("goto lifting not implemented yet!")
+
+    assert(cond_index >= 0 and stmt_index >= 0 and cond_index != stmt_index)
+
+    between_stmts = parent_compound.block_items[cond_index+1:stmt_index]
+    between_compound = Compound(between_stmts)
+
+    goto = conditional.iftrue
+    logical_name = logical_label_name(goto)
+    cond = conditional.cond
+    set_logical = create_assign(logical_name, cond)
+    guard = If(negate(ID(logical_name)), between_compound, None)
+
+    in_stmt.cond = BinaryOp("||", ID(logical_name), in_stmt.cond)
+
+    bi = parent_compound.block_items
+    parent_compound.block_items = bi[:cond_index] + [set_logical, guard, in_stmt] + bi[stmt_index+1:]
+
+    update_parents(between_compound)
+    update_parents(parent_compound)
+
 def move_goto_in_if(conditional, label):
     """Move a goto into an if-statement."""
     assert(under_if(label))
     above_compound = conditional.parents[-1]
     if_compound = label.parents[-1]
     if_stmt = label.parents[-2]
-    goto = conditional.iftrue
-
-    if type(above_compound) != Compound:
-        raise NotImplementedError("can only move gotos into if-statements whose parents are compounds!")
-
-    if (goto.offset > label.offset):
-        raise NotImplementedError("goto lifting not implemented yet!")
-
-    if not are_siblings(conditional, if_stmt):
-        raise NotImplementedError("nested IT not implemented yet!")
 
     if if_stmt.iftrue != if_compound:
         raise NotImplementedError("only support labels in the 'then' clause for IT!")
 
-    logical_name = logical_label_name(goto)
-    cond = conditional.cond
-    set_logical = create_assign(logical_name, cond)
-
-    cond_index = above_compound.block_items.index(conditional)
-    if_index = above_compound.block_items.index(if_stmt)
-
-    assert(cond_index >= 0 and if_index >= 0 and cond_index != if_index)
-
-    between_stmts = above_compound.block_items[cond_index+1:if_index]
-    between_compound = Compound(between_stmts)
-
-    guard = If(negate(ID(logical_name)), between_compound, None)
-    conditional.cond = ID(logical_name)
-
-    if_stmt.cond = BinaryOp("||", ID(logical_name), if_stmt.cond)
-
-    bi = above_compound.block_items
-    above_compound.block_items = bi[:cond_index] + [set_logical, guard] + bi[if_index:]
+    place_inwards_cond_guard(above_compound, conditional, if_stmt)
     if_compound.block_items.insert(0, conditional)
     update_parents(if_compound)
 
