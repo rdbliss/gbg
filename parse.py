@@ -389,7 +389,9 @@ def move_goto_in_loop(conditional, label):
     compound = conditional.parents[-1]
 
     place_inwards_cond_guard(compound, conditional, loop)
+    loop.cond = BinaryOp("||", ID(logical_name), in_stmt.cond)
     loop_compound.block_items.insert(0, conditional)
+    conditional.cond = ID(logical_name)
     update_parents(loop_compound)
 
 def move_goto_out_if(conditional):
@@ -451,9 +453,6 @@ def place_inwards_cond_guard(parent_compound, conditional, in_stmt):
     cond = conditional.cond
     set_logical = create_assign(logical_name, cond)
     guard = If(negate(ID(logical_name)), between_compound, None)
-    conditional.cond = ID(logical_name)
-
-    in_stmt.cond = BinaryOp("||", ID(logical_name), in_stmt.cond)
 
     bi = parent_compound.block_items
     parent_compound.block_items = bi[:cond_index] + [set_logical, guard, in_stmt] + bi[stmt_index+1:]
@@ -475,7 +474,9 @@ def move_goto_in_if(conditional, label):
         raise NotImplementedError("only support labels in the 'then' clause for IT!")
 
     place_inwards_cond_guard(above_compound, conditional, if_stmt)
+    if_stmt.cond = BinaryOp("||", ID(logical_name), in_stmt.cond)
     if_compound.block_items.insert(0, conditional)
+    conditional.cond = ID(logical_name)
     update_parents(if_compound)
 
 def negate(exp):
