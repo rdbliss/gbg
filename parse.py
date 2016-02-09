@@ -457,7 +457,10 @@ def place_inwards_cond_guard(parent_compound, conditional, in_stmt):
     bi = parent_compound.block_items
     parent_compound.block_items = bi[:cond_index] + [set_logical, guard, in_stmt] + bi[stmt_index+1:]
 
-    update_parents(between_compound)
+    # The nodes moved inside of a guard have gained two parents, while
+    # update_parents currently (2016-02-08) only checks for one.
+    for node in between_compound.block_items:
+        node.parents = node.parents + [guard, guard.iftrue]
     update_parents(parent_compound)
 
 def move_goto_in_if(conditional, label):
