@@ -49,9 +49,21 @@ def remove_siblings(label, conditional):
     Parents need to be updated after the removal, and this function does that."""
     assert(are_siblings(label, conditional))
 
-    compound = label.parents[-1]
-    label_index = compound.block_items.index(label)
-    cond_index = compound.block_items.index(conditional)
+    parent = label.parents[-1]
+    parent_list = []
+    attr_name = ""
+
+    if type(parent) == Case:
+        attr_name = "stmts"
+        parent_list = parent.stmts
+    elif type(parent) == Compound:
+        attr_name = "block_items"
+        parent_list = parent.block_items
+    else:
+        raise ValueError("got parents for removal that weren't compound or cases!")
+
+    label_index = parent_list.index(label)
+    cond_index = parent_list.index(conditional)
 
     assert(label_index >= 0 and cond_index >= 0)
     assert(label_index != cond_index)
@@ -61,13 +73,13 @@ def remove_siblings(label, conditional):
         # In this case, we guard the statements from the goto to the label in a
         # new conditional.
         cond = negate(conditional.cond)
-        in_between = compound.block_items[cond_index+1:label_index]
+        in_between = parent_list[cond_index+1:label_index]
         between_compound = Compound(in_between)
         update_parents(between_compound)
         guard = If(cond, between_compound, None)
-        pre_goto = compound.block_items[:cond_index]
-        post_conditional = compound.block_items[label_index:]
-        compound.block_items = pre_goto + [guard] + post_conditional
+        pre_goto = parent_list[:cond_index]
+        post_conditional = parent_list[label_index:]
+        setattr(parent, attr_name, pre_goto + [guard] + post_conditional)
     else:
         # Goto is after the label (or the goto _is_ the label, which means
         # something has gone terribly wrong).
@@ -76,14 +88,14 @@ def remove_siblings(label, conditional):
         # Also, we'll need to make sure we grab the statement that the label
         # itself captures.
         cond = conditional.cond
-        between_statements = [label.stmt] + compound.block_items[label_index+1:cond_index]
+        between_statements = [label.stmt] + parent_list[label_index+1:cond_index]
         between_compound = Compound(between_statements)
         update_parents(between_compound)
         do_while = DoWhile(cond, between_compound)
         label.stmt = do_while
-        pre_to_label = compound.block_items[:label_index+1]
-        after_goto = compound.block_items[cond_index+1:]
-        compound.block_items = pre_to_label + after_goto
+        pre_to_label = parent_list[:label_index+1]
+        after_goto = parent_list[cond_index+1:]
+        setattr(parent, attr_name, pre_to_label + after_goto)
 
 def are_directly_related(one, two):
     """Check if two nodes are directly related.
@@ -117,8 +129,8 @@ def are_siblings(one, two):
 
     They are siblings iff they both exist unnested in a sequence of
     statements. Currently, this is checked by looking to see if
-        1. Both are under a Compound node, and
-        2. Both have the _same_ Compound node as a parent.
+        1. Both are under a Compound or Case node, and
+        2. Both have the _same_ node as a parent.
     I justify this by saying that there can't be any sequence of statements if
     they aren't inside of a Compound.
     """
@@ -127,8 +139,10 @@ def are_siblings(one, two):
 
     under_compound = (type(one_parent) == Compound and
                         type(two_parent) == Compound)
+    under_case = (type(one_parent) == Case and
+                        type(two_parent) == Case)
 
-    return under_compound and one_parent == two_parent
+    return (under_compound or under_case) and one_parent == two_parent
 
 class GotoLabelFinder(NodeVisitor):
     """Visitor that will find every goto or label under a given node.
@@ -365,18 +379,24 @@ def logic_init(labels, func):
     """
 
     for label in labels:
-        compound = label.parents[-1]
-        if type(compound) != Compound:
-            raise NotImplementedError("Can only initialize labels under compounds for now!")
+        parent = label.parents[-1]
+        to_insert = []
+        if type(parent) == Compound:
+            to_insert = parent.block_items
+        elif type(parent) == Case:
+            to_insert = parent.stmts
+        else:
+            raise NotImplementedError("Can only initialize labels under compounds or cases for now!")
+
         declare_logic_variable("goto_{}".format(label.name), func)
 
         val = Constant("int", "0")
         clear_logical_var = create_assign(logical_label_name(label), val)
-        label_index = compound.block_items.index(label)
+        label_index = to_insert.index(label)
 
         # Move the statement that the label holds to after the label,
         # and the setting to 0 into the label.
-        compound.block_items.insert(label_index + 1, label.stmt)
+        to_insert.insert(label_index + 1, label.stmt)
         label.stmt = clear_logical_var
 
 def move_goto_in_loop(conditional, label):
