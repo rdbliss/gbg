@@ -463,6 +463,8 @@ def place_inwards_cond_guard(parent_compound, conditional, in_stmt):
         node.parents = node.parents + [guard, guard.iftrue]
     update_parents(parent_compound)
 
+    return guard
+
 def move_goto_in_if(conditional, label):
     """Move a goto into an if-statement."""
     assert(under_if(label))
