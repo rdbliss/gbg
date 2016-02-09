@@ -85,17 +85,16 @@ def remove_siblings(label, conditional):
         # something has gone terribly wrong).
         # In this case, we place a do-while loop directly after the label that
         # will execute the statements as long as we're jumping.
-        # Also, we'll need to make sure we grab the statement that the label
-        # itself captures.
+        # We will _not_ grab the statement from the label, because at this point
+        # every label contains a statement that clears its logical variable.
         cond = conditional.cond
-        between_statements = [label.stmt] + parent_list[label_index+1:cond_index]
+        between_statements = parent_list[label_index+1:cond_index]
         between_compound = Compound(between_statements)
         update_parents(between_compound)
         do_while = DoWhile(cond, between_compound)
-        label.stmt = do_while
         pre_to_label = parent_list[:label_index+1]
         after_goto = parent_list[cond_index+1:]
-        setattr(parent, attr_name, pre_to_label + after_goto)
+        setattr(parent, attr_name, pre_to_label + [do_while] + after_goto)
 
 def are_directly_related(one, two):
     """Check if two nodes are directly related.
