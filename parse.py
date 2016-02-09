@@ -380,6 +380,7 @@ def logic_init(labels, func):
         label.stmt = clear_logical_var
 
 def move_goto_in_loop(conditional, label):
+    """Move a goto in a loop-statement."""
     assert(is_conditional_goto(conditional))
     assert(under_loop(label))
 
@@ -431,6 +432,13 @@ def move_goto_out_if(conditional):
     update_parents(above_if)
 
 def place_inwards_cond_guard(parent_compound, conditional, in_stmt):
+    """Place the guarding conditional and change the goto's condition for IT.
+    In effect, this places a new conditional that guards the statements between
+    `conditional` and `in_stmt`, using `conditional.cond` as the guard's
+    condition.
+
+    Returns the guard conditional.
+    """
     if type(parent_compound) != Compound:
         raise NotImplementedError("can only move gotos into statements whose parents are compounds!")
 
