@@ -411,12 +411,7 @@ def move_goto_out_if(conditional):
 
     cond_index = if_compound.block_items.index(conditional)
     assert(cond_index >= 0)
-    after_goto = []
-
-    try:
-        after_goto = if_compound.block_items[cond_index+1:]
-    except IndexError:
-        pass
+    after_goto = if_compound.block_items[cond_index+1:]
 
     guard_block = Compound(after_goto)
     guard = If(negate(ID(logical_name)), guard_block, None)
