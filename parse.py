@@ -451,6 +451,7 @@ def place_inwards_cond_guard(parent_compound, conditional, in_stmt):
     cond = conditional.cond
     set_logical = create_assign(logical_name, cond)
     guard = If(negate(ID(logical_name)), between_compound, None)
+    conditional.cond = ID(logical_name)
 
     in_stmt.cond = BinaryOp("||", ID(logical_name), in_stmt.cond)
 
