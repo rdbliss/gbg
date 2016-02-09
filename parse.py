@@ -504,6 +504,42 @@ def move_goto_in_if(conditional, label):
     conditional.cond = ID(logical_name)
     update_parents(if_compound)
 
+def logical_switch_name(switch):
+    # https://stackoverflow.com/questions/279561
+    if "counter" not in logical_switch_name.__dict__:
+        logical_switch_name.counter = -1
+
+    logical_switch_name.counter += 1
+    return "switch_var_" + str(logical_switch_name.counter)
+
+def move_goto_in_switch(conditional, label, func):
+    """Move a goto into a switch statement."""
+    assert(under_switch(label))
+    switch, compound, case = label.parents[-3:]
+    above_compound = conditional.parents[-1]
+
+    guard = place_inwards_cond_guard(above_compound, conditional, switch)
+
+    switch_var = switch.cond;
+    logical_name = logical_switch_name(switch)
+    declare_logic_variable(logical_switch_name(switch), func)
+
+    # This makes the logical variable exactly the switch variable.
+    continue_switch = create_assign(logical_name, switch_var)
+    # This makes the logical variable the case that our label is under.
+    steal_switch = create_assign(logical_name, case.expr)
+
+    label_name = logical_label_name(conditional.iftrue)
+    switch.var = ID(label_name)
+    # If the goto's cond was false, then continue as normal.
+    guard.iftrue.block_items.append(continue_switch)
+    # If the goto's cond was true, then force jumping to the switch case.
+    guard.iffalse = steal_switch
+
+    case.stmts.insert(0, conditional)
+    conditional.cond = ID(label_name)
+    conditional.parents += [switch, compound, case]
+
 def negate(exp):
     return UnaryOp("!", exp)
 
@@ -534,8 +570,8 @@ def do_it(func_node):
                 elif under_loop(label):
                     move_goto_in_loop(conditional, label)
                 elif under_switch(label):
-                    print("Can't do switch IT yet...")
-                    break
+                    print("Moving into a switch...")
+                    move_goto_in_switch(conditional, label, func)
                 elif under_if(label):
                     move_goto_in_if(conditional, label)
                 else:
