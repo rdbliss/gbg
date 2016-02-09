@@ -530,7 +530,7 @@ def move_goto_in_switch(conditional, label, func):
     steal_switch = create_assign(logical_name, case.expr)
 
     label_name = logical_label_name(conditional.iftrue)
-    switch.var = ID(label_name)
+    switch.cond = ID(logical_name)
     # If the goto's cond was false, then continue as normal.
     guard.iftrue.block_items.append(continue_switch)
     # If the goto's cond was true, then force jumping to the switch case.
