@@ -455,6 +455,48 @@ def move_goto_out_if(conditional):
     above_if.block_items.insert(if_index + 1, conditional)
     update_parents(above_if)
 
+def move_goto_in_if(conditional, label):
+    """Move a goto into an if-statement."""
+    assert(under_if(label))
+    above_compound = conditional.parents[-1]
+    if_compound = label.parents[-1]
+    if_stmt = label.parents[-2]
+    goto = conditional.iftrue
+
+    if type(above_compound) != Compound:
+        raise NotImplementedError("can only move gotos into if-statements whose parents are compounds!")
+
+    if (goto.offset > label.offset):
+        raise NotImplementedError("goto lifting not implemented yet!")
+
+    if not are_siblings(conditional, if_stmt):
+        raise NotImplementedError("nested IT not implemented yet!")
+
+    if if_stmt.iftrue != if_compound:
+        raise NotImplementedError("only support labels in the 'then' clause for IT!")
+
+    logical_name = logical_label_name(goto)
+    cond = conditional.cond
+    set_logical = create_assign(logical_name, cond)
+
+    cond_index = above_compound.block_items.index(conditional)
+    if_index = above_compound.block_items.index(if_stmt)
+
+    assert(cond_index >= 0 and if_index >= 0 and cond_index != if_index)
+
+    between_stmts = above_compound.block_items[cond_index+1:if_index]
+    between_compound = Compound(between_stmts)
+
+    guard = If(negate(ID(logical_name)), between_compound, None)
+    conditional.cond = ID(logical_name)
+
+    if_stmt.cond = BinaryOp("||", ID(logical_name), if_stmt.cond)
+
+    bi = above_compound.block_items
+    above_compound.block_items = bi[:cond_index] + [set_logical, guard] + bi[if_index:]
+    if_compound.block_items.insert(0, conditional)
+    update_parents(if_compound)
+
 def negate(exp):
     return UnaryOp("!", exp)
 
@@ -488,8 +530,7 @@ def do_it(func_node):
                     print("Can't do switch IT yet...")
                     break
                 elif under_if(label):
-                    print("Can't do if-statement IT yet...")
-                    break
+                    move_goto_in_if(conditional, label)
                 else:
                     print("Nothing we can do for the non-looped...")
                     break
