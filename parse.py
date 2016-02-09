@@ -568,11 +568,13 @@ def do_it(func_node):
                     print("Moving out of a switch...")
                     move_goto_out_switch(conditional)
                 elif under_loop(label):
+                    print("Moving into a loop...")
                     move_goto_in_loop(conditional, label)
                 elif under_switch(label):
                     print("Moving into a switch...")
                     move_goto_in_switch(conditional, label, func)
                 elif under_if(label):
+                    print("Moving into an if-statement...")
                     move_goto_in_if(conditional, label)
                 else:
                     print("Nothing we can do for the non-looped...")
