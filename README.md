@@ -7,6 +7,17 @@ Statements_ using a modified pycparser library.
 It reads in a C file, searches for a function, prints the function, eliminates
 the gotos that it can, then prints the function post-removal.
 
+## Setup
+
+The implementation relies on a slightly modified version of the pycparser
+library. A virtualenv will need to be setup in the directory of the project.
+
+    $ virtualenv .
+    $ source ./env/bin/activate
+    $ (env) pip3 install ./pycparser
+
+This should get it up and running if you're in the virtualenv.
+
 ## Usage
 
 `./parse.py infile [function]`
