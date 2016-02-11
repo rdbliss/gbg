@@ -223,6 +223,7 @@ class GotoLabelFinder(NodeVisitor):
         node.level = self.level
         self.labels.append(node)
         self.offset += 1
+        self.generic_visit(node)
 
     def visit_If(self, node):
         self.level_visit(node)
