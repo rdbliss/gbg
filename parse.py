@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import pycparser
 from pycparser.c_ast import *
 from pycparser import c_generator
