@@ -27,7 +27,7 @@ the goto statements, and then output the C code again.
 
 The main tool used is the pycparser library. Benefits of using pycparser:
 
-- Parses standard C99 code (it's hard to overstate how useful this is);
+- Parses standard C99 code
 
 It's hard to overstate how complicated C code is. Someone else writing the
 parser is a burden removed.
