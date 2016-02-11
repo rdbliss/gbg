@@ -405,9 +405,10 @@ def logic_init(labels, func):
         label_index = to_insert.index(label)
 
         # Move the statement that the label holds to after the label,
-        # and the setting to 0 into the label.
+        # and the setting to 0 into the label. Make sure we update parents.
         to_insert.insert(label_index + 1, label.stmt)
         label.stmt = clear_logical_var
+        update_parents(parent)
 
 def move_goto_in_loop(conditional, label):
     """Move a goto in a loop-statement."""
