@@ -495,7 +495,8 @@ def place_inwards_cond_guard(parent_compound, conditional, in_stmt):
     # The nodes moved inside of a guard have gained two parents, while
     # update_parents currently (2016-02-08) only checks for one.
     for node in between_compound.block_items:
-        node.parents = node.parents + [guard, guard.iftrue]
+        if "parents" in node.__dict__:
+            node.parents = node.parents + [guard, guard.iftrue]
     update_parents(parent_compound)
 
     return guard
