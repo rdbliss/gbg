@@ -36,13 +36,23 @@ def is_conditional_goto(node):
 
 def update_parents(compound):
     """
-    Find every label or conditional goto under the top-level of `compound` and
+    Set node.parents[-1] = compound for every node in compound.block_items.
     make sure their parent is `compound`.
     Normally used after a transformation.
     """
-    for node in compound.block_items:
-        if type(node) == Goto or is_conditional_goto(node):
-            node.parents[-1] = compound
+
+    if type(compound) == Compound:
+        for node in compound.block_items:
+            if "parents" in node.__dict__:
+                node.parents[-1] = compound
+            else:
+                node.parents = [compound]
+    elif type(compound) == Case:
+        for node in compound.stmts:
+            if "parents" in node.__dict__:
+                node.parents[-1] = compound
+            else:
+                node.parents = [compound]
 
 def remove_siblings(label, conditional):
     """Remove a conditional goto/label node pair that are siblings.
