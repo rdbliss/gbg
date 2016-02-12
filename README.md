@@ -7,6 +7,8 @@ Statements_ using a modified pycparser library.
 It reads in a C file, searches for a function, prints the function, eliminates
 the gotos that it can, then prints the function post-removal.
 
+See implementation notes [here](./notes.md).
+
 ## Setup
 
 The implementation relies on a slightly modified version of the pycparser
