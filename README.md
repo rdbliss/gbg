@@ -37,18 +37,20 @@ Hopefully this will be a part of the implementation.
 
 - Statements directly "under" a label
 
-    // The if statement is directly "under" the label, so this won't work.
-    bad:
-        if (cond) {
-            if (jump()) goto bad;
-        }
+````C
+// The if statement is directly "under" the label, so this won't work.
+bad:
+    if (cond) {
+        if (jump()) goto bad;
+    }
 
-    // No gotos are under the label, so this is fine.
-    good:
-        foo();
-        if (cond) {
-            if (jump()) goto good;
-        }
+// No gotos are under the label, so this is fine.
+good:
+    foo();
+    if (cond) {
+        if (jump()) goto good;
+    }
+````
 
 - Indirectly related nodes
 
